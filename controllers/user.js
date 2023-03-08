@@ -2,7 +2,7 @@ const User = require('../models/user');
 
 module.exports.getUsers = (req, res) => {
   User.find({})
-    .then((users) => res.send(users))
+    .then((users) => res.status(200).send(users))
     .catch(() => res.status(500).send({ message: 'Internal Server Error' }));
 };
 
@@ -11,7 +11,7 @@ module.exports.createUser = (req, res) => {
 
   User.create({ name, about, avatar })
     .then((user) => {
-      res.send(user);
+      res.status(200).send(user);
     })
     .catch((error) => {
       if (error.name === 'ValidationError') {
@@ -68,7 +68,7 @@ module.exports.updateUserAvatar = (req, res) => {
   User.findByIdAndUpdate(req.user._id, { avatar }, { new: true, runValidators: true })
     .orFail()
     .then((user) => {
-      res.send(user);
+      res.status(200).send(user);
     })
     .catch((error) => {
       if (error.name === 'ValidationError') {
