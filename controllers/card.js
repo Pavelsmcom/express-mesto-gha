@@ -31,6 +31,10 @@ module.exports.deleteCard = (req, res) => {
       res.status(200).send(result);
     })
     .catch((error) => {
+      if (error.name === 'CastError') {
+        res.status(400).send({ message: 'Bad Request' });
+        return;
+      }
       if (error.name === 'DocumentNotFoundError') {
         res.status(404).send({ message: 'Not Found' });
         return;
