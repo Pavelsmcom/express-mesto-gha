@@ -35,3 +35,5 @@ mongoose
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);
 });
+
+// ВЫНЕСТИ ВСЕ КОДЫ В КОНСТАНТЫ
