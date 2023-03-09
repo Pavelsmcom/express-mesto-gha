@@ -8,6 +8,7 @@ const cardsRoutes = require('./routes/cards');
 const { PORT = 3000 } = process.env;
 
 const app = express();
+
 app.use(bodyParser.json());
 
 app.use((req, res, next) => {
@@ -35,5 +36,3 @@ mongoose
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);
 });
-
-// ВЫНЕСТИ ВСЕ КОДЫ В КОНСТАНТЫ
