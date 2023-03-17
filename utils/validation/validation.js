@@ -25,6 +25,12 @@ module.exports.validateMe = celebrate({
   }),
 });
 
+module.exports.validateUserId = celebrate({
+  params: Joi.object().keys({
+    id: Joi.string().required().length(24),
+  }),
+});
+
 module.exports.validateAvatar = celebrate({
   body: Joi.object().keys({
     avatar: Joi.string().pattern(REGEX_LINK),

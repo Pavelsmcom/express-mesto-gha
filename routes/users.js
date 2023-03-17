@@ -1,5 +1,5 @@
 const usersRoutes = require('express').Router();
-const { validateMe, validateAvatar } = require('../utils/validation/validation');
+const { validateMe, validateAvatar, validateUserId } = require('../utils/validation/validation');
 
 const {
   getUsers, getUser, updateUser, updateUserAvatar, getMe,
@@ -8,7 +8,7 @@ const {
 usersRoutes.get('/', getUsers);
 usersRoutes.patch('/me', validateMe, updateUser);
 usersRoutes.get('/me', getMe);
-usersRoutes.get('/:userId', getUser);
+usersRoutes.get('/:userId', validateUserId, getUser);
 usersRoutes.patch('/me/avatar', validateAvatar, updateUserAvatar);
 
 module.exports = usersRoutes;
