@@ -1,3 +1,2 @@
-module.exports.HTTP_STATUS_BAD_REQUEST = 400;
-module.exports.HTTP_STATUS_NOT_FOUND = 404;
-module.exports.HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
+module.exports.SOME_SECRET_KEY = 'some_secret_key';
+module.exports.REGEX_LINK = /(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/;

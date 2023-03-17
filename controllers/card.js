@@ -1,16 +1,15 @@
 const Card = require('../models/card');
+const NotFoundError = require('../utils/errors/not-found-error');
+const BadRequestError = require('../utils/errors/bad-request-error');
+const ForbiddenError = require('../utils/errors/forbidden-error');
 
-const {
-  HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_INTERNAL_SERVER_ERROR,
-} = require('../utils/constants');
-
-module.exports.getCards = (req, res) => {
+module.exports.getCards = (req, res, next) => {
   Card.find({})
     .then((cards) => res.send(cards))
-    .catch(() => res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' }));
+    .catch(next);
 };
 
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const { name, link } = req.body;
 
   Card.create({ name, link, owner: req.user._id })
@@ -19,35 +18,42 @@ module.exports.createCard = (req, res) => {
     })
     .catch((error) => {
       if (error.name === 'ValidationError') {
-        res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+        next(new BadRequestError('Bad Request'));
         return;
       }
-      res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' });
+      next(error);
     });
 };
 
-module.exports.deleteCard = (req, res) => {
+module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
-
-  Card.findByIdAndDelete(cardId)
+  const { _id } = req.user;
+  Card.findById(cardId)
     .orFail()
-    .then(() => {
-      res.send({ message: 'Пост удалён' });
+    .then((card) => {
+      if (card.owner.toString() !== _id) {
+        next(new ForbiddenError('Can`t delete others posts'));
+      } else {
+        Card.findByIdAndDelete(cardId)
+          .then(() => {
+            res.send({ message: 'Post delete' });
+          });
+      }
     })
     .catch((error) => {
       if (error.name === 'CastError') {
-        res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+        next(new BadRequestError('Bad Request'));
         return;
       }
       if (error.name === 'DocumentNotFoundError') {
-        res.status(HTTP_STATUS_NOT_FOUND).send({ message: 'Not Found' });
+        next(new NotFoundError('Not Found'));
         return;
       }
-      res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' });
+      next(error);
     });
 };
 
-module.exports.likeCard = (req, res) => {
+module.exports.likeCard = (req, res, next) => {
   Card.findByIdAndUpdate(req.params.cardId, { $addToSet: { likes: req.user._id } }, { new: true })
     .orFail()
     .then((card) => {
@@ -55,18 +61,18 @@ module.exports.likeCard = (req, res) => {
     })
     .catch((error) => {
       if (error.name === 'CastError') {
-        res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+        next(new BadRequestError('Bad Request'));
         return;
       }
       if (error.name === 'DocumentNotFoundError') {
-        res.status(HTTP_STATUS_NOT_FOUND).send({ message: 'Not Found' });
+        next(new NotFoundError('Not Found'));
         return;
       }
-      res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' });
+      next(error);
     });
 };
 
-module.exports.dislikeCard = (req, res) => {
+module.exports.dislikeCard = (req, res, next) => {
   Card.findByIdAndUpdate(req.params.cardId, { $pull: { likes: req.user._id } }, { new: true })
     .orFail()
     .then((card) => {
@@ -74,13 +80,13 @@ module.exports.dislikeCard = (req, res) => {
     })
     .catch((error) => {
       if (error.name === 'CastError') {
-        res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+        next(new BadRequestError('Bad Request'));
         return;
       }
       if (error.name === 'DocumentNotFoundError') {
-        res.status(HTTP_STATUS_NOT_FOUND).send({ message: 'Not Found' });
+        next(new NotFoundError('Not Found'));
         return;
       }
-      res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' });
+      next(error);
     });
 };

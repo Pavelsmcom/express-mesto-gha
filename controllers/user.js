@@ -1,32 +1,46 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
 const User = require('../models/user');
+const NotFoundError = require('../utils/errors/not-found-error');
+const BadRequestError = require('../utils/errors/bad-request-error');
+const UnauthorizedError = require('../utils/errors/unauthorized-error');
+const ConflictError = require('../utils/errors/conflict-error');
+const { SOME_SECRET_KEY } = require('../utils/constants');
 
-const {
-  HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_INTERNAL_SERVER_ERROR,
-} = require('../utils/constants');
-
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send(users))
-    .catch(() => res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' }));
+    .catch(next);
 };
 
-module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-
-  User.create({ name, about, avatar })
+module.exports.createUser = (req, res, next) => {
+  const {
+    name, about, avatar, email, password,
+  } = req.body;
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
+      name, about, avatar, email, password: hash,
+    }))
     .then((user) => {
       res.send(user);
     })
     .catch((error) => {
-      if (error.name === 'ValidationError') {
-        res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+      if (error.code === 11000) {
+        next(new ConflictError('A user already exists'));
         return;
       }
-      res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' });
+
+      if (error.name === 'ValidationError') {
+        next(new BadRequestError('Bad Request'));
+        return;
+      }
+
+      next(error);
     });
 };
 
-module.exports.getUser = (req, res) => {
+module.exports.getUser = (req, res, next) => {
   const { userId } = req.params;
 
   User.findById(userId, undefined, { runValidators: true })
@@ -34,18 +48,19 @@ module.exports.getUser = (req, res) => {
     .then((user) => res.send(user))
     .catch((error) => {
       if (error.name === 'CastError') {
-        res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+        next(new BadRequestError('Bad Request'));
+
         return;
       }
       if (error.name === 'DocumentNotFoundError') {
-        res.status(HTTP_STATUS_NOT_FOUND).send({ message: 'Not Found' });
+        next(new NotFoundError('Not Found'));
         return;
       }
-      res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' });
+      next(error);
     });
 };
 
-module.exports.updateUser = (req, res) => {
+module.exports.updateUser = (req, res, next) => {
   const { name, about } = req.body;
 
   User.findByIdAndUpdate(req.user._id, { name, about }, { new: true, runValidators: true })
@@ -56,24 +71,24 @@ module.exports.updateUser = (req, res) => {
     .catch((error) => {
       switch (error.name) {
         case 'ValidationError':
-          res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+          next(new BadRequestError('Bad Request'));
           break;
 
         case 'CastError':
-          res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+          next(new BadRequestError('Bad Request'));
           break;
 
         case 'DocumentNotFoundError':
-          res.status(HTTP_STATUS_NOT_FOUND).send({ message: 'Not Found' });
+          next(new NotFoundError('Not Found'));
           break;
 
         default:
-          res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' });
+          next(error);
       }
     });
 };
 
-module.exports.updateUserAvatar = (req, res) => {
+module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
 
   User.findByIdAndUpdate(req.user._id, { avatar }, { new: true, runValidators: true })
@@ -84,19 +99,54 @@ module.exports.updateUserAvatar = (req, res) => {
     .catch((error) => {
       switch (error.name) {
         case 'ValidationError':
-          res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+          next(new BadRequestError('Bad Request'));
           break;
 
         case 'CastError':
-          res.status(HTTP_STATUS_BAD_REQUEST).send({ message: 'Bad Request' });
+          next(new BadRequestError('Bad Request'));
           break;
 
         case 'DocumentNotFoundError':
-          res.status(HTTP_STATUS_NOT_FOUND).send({ message: 'Not Found' });
+          next(new NotFoundError('Not Found'));
           break;
 
         default:
-          res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).send({ message: 'Internal Server Error' });
+          next(error);
       }
+    });
+};
+
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+  return User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign({ _id: user._id }, SOME_SECRET_KEY, { expiresIn: '7d' });
+      // res.send({ token });
+      res.cookie('jwt', token, {
+        maxAge: 3600000 * 24 * 7,
+        httpOnly: true,
+      }).end();
+    })
+    .catch((err) => {
+      next(new UnauthorizedError(err.message));
+    });
+};
+
+module.exports.getMe = (req, res, next) => {
+  const { _id } = req.user;
+
+  User.findById(_id)
+    .orFail()
+    .then((user) => res.send(user))
+    .catch((error) => {
+      if (error.name === 'CastError') {
+        next(new BadRequestError('Bad Request'));
+        return;
+      }
+      if (error.name === 'DocumentNotFoundError') {
+        next(new NotFoundError('Not Found'));
+        return;
+      }
+      next(error);
     });
 };

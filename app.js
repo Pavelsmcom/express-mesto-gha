@@ -3,9 +3,18 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+// const { celebrate, Joi } = require('celebrate');
+const { errors } = require('celebrate');
+const cookieParser = require('cookie-parser');
+
+const errorMiddleware = require('./middlewares/error-middleware');
+const NotFoundError = require('./utils/errors/not-found-error');
+const { validateSignIn, validateSignUp } = require('./utils/validation/validation');
 
 const usersRoutes = require('./routes/users');
 const cardsRoutes = require('./routes/cards');
+const { login, createUser } = require('./controllers/user');
+const auth = require('./middlewares/auth');
 
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minutes
@@ -20,19 +29,19 @@ const app = express();
 app.use(helmet());
 app.use(limiter);
 app.use(bodyParser.json());
+app.use(cookieParser());
 
-app.use((req, res, next) => {
-  req.user = {
-    _id: '6405f65d8a11adbdb5553646',
-  };
-  next();
+app.post('/signin', validateSignIn, login);
+app.post('/signup', validateSignUp, createUser);
+
+app.use('/users', auth, usersRoutes);
+app.use('/cards', auth, cardsRoutes);
+app.use('/*', (req, res, next) => {
+  next(new NotFoundError('Not Found'));
 });
 
-app.use('/users', usersRoutes);
-app.use('/cards', cardsRoutes);
-app.use('/*', (req, res) => {
-  res.status(404).send({ message: 'Not Found' });
-});
+app.use(errors());
+app.use(errorMiddleware);
 
 mongoose
   .connect('mongodb://127.0.0.1:27017/mestodb')
