@@ -22,8 +22,10 @@ module.exports.createUser = (req, res, next) => {
     .then((hash) => User.create({
       name, about, avatar, email, password: hash,
     }))
-    .then((user) => {
-      res.send(user);
+    .then(() => {
+      res.send({
+        message: 'user created',
+      });
     })
     .catch((error) => {
       if (error.code === 11000) {
@@ -121,11 +123,11 @@ module.exports.login = (req, res, next) => {
   return User.findUserByCredentials(email, password)
     .then((user) => {
       const token = jwt.sign({ _id: user._id }, SOME_SECRET_KEY, { expiresIn: '7d' });
-      // res.send({ token });
-      res.cookie('jwt', token, {
-        maxAge: 3600000 * 24 * 7,
-        httpOnly: true,
-      }).end();
+      res.send({ token });
+    //   res.cookie('jwt', token, {
+    //     maxAge: 3600000 * 24 * 7,
+    //     httpOnly: true,
+    //   }).end();
     })
     .catch((err) => {
       next(new UnauthorizedError(err.message));
