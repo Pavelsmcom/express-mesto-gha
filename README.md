@@ -1,7 +1,7 @@
 ## Проект `Mesto`
 
-Бэкенд для интерактивной страницы "Mesto"
-Фронтенд часть вы можете посмотреть [Mesto](https://github.com/Pavelsmcom/react-mesto-api-full-gha)
+Бэкенд для интерактивной страницы "Mesto". 
+Фронтенд часть вы можете посмотреть по ссылке: [Mesto](https://github.com/Pavelsmcom/react-mesto-api-full-gha)
 
 ## Ссылка на проект: 
 
